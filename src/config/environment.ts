@@ -15,18 +15,23 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 function createMongoUri(): string {
-  const configuredUri = process.env.MONGODB_URI?.trim();
-  if (configuredUri) return configuredUri;
+  let mongoUri = process.env.MONGODB_URI?.trim();
+  if (!mongoUri) {
+    const username = encodeURIComponent(requiredEnvironmentVariable('DB_USER'));
+    const password = encodeURIComponent(requiredEnvironmentVariable('DB_PASS'));
+    mongoUri = `mongodb+srv://${username}:${password}@coredenzcluster.3lgwfez.mongodb.net/?appName=CoredenzCluster`;
+  }
 
-  const username = encodeURIComponent(requiredEnvironmentVariable('DB_USER'));
-  const password = encodeURIComponent(requiredEnvironmentVariable('DB_PASS'));
-  return `mongodb+srv://${username}:${password}@cluster0.flzolds.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+  if (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://')) {
+    throw new Error('MONGODB_URI must start with "mongodb://" or "mongodb+srv://".');
+  }
+  return mongoUri;
 }
 
 export const environment = {
   port,
   mongoUri: createMongoUri(),
-  databaseName: process.env.DB_NAME?.trim() || 'coredenz',
+  databaseName: process.env.DB_NAME?.trim() || 'coredenzDB',
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3000')
     .split(',')
     .map(origin => origin.trim())
